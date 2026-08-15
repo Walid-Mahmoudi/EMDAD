@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -41,7 +42,15 @@ export default async function AdminDashboard() {
               أهلاً، {profile?.full_name || "المدير"}
             </h1>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-4">
+            <Link
+              href="/admin/employees"
+              className="text-sm font-medium text-brand hover:text-brand-dark"
+            >
+              إدارة الموظفين
+            </Link>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
