@@ -58,3 +58,4 @@ git push -u origin main
 ## 4) الربط بـ Vercel
 
 بعد الـ push، هربط المشروع بـ Vercel مباشرة عن طريق الـ connector، وهضيف متغيرات البيئة (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) هناك تلقائيًا.
+ 
