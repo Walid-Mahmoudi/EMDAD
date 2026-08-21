@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getCurrentProfile } from '@/lib/supabase/server';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentProfile, createClient } from '@/lib/supabase/server';
 
 const money = (v) => new Intl.NumberFormat('en-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 0 }).format(Number(v || 0));
 
@@ -9,7 +8,7 @@ export default async function ReportsPage() {
   if (!user) redirect('/login');
   if (!profile?.is_active || profile.role !== 'admin') redirect('/employee');
 
-  const supabase = await createClient();
+  const supabase = createClient();
   const [{ data: financials, error: financialError }, { data: performance, error: performanceError }] = await Promise.all([
     supabase.from('crm_project_financials').select('*').order('weighted_value', { ascending: false }),
     supabase.from('crm_employee_performance').select('*').order('pipeline_value', { ascending: false }),
@@ -33,21 +32,18 @@ export default async function ReportsPage() {
         <h1 style={{ marginBottom: 4 }}>Management Reports</h1>
         <p style={{ color: '#666', marginTop: 0 }}>Live reporting directly from the CRM database.</p>
         {error && <div style={{ background: '#fee2e2', padding: 14, borderRadius: 8, margin: '16px 0' }}>{error.message}</div>}
-
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12, margin: '24px 0' }}>
           {[
             ['Expected Pipeline', money(totalExpected)], ['Weighted Pipeline', money(totalWeighted)], ['Contract Value', money(totalContract)],
             ['Required Collection', money(totalRequired)], ['Collected', money(totalCollected)], ['Outstanding', money(totalOutstanding) + ` (${collectionPct}%)`]
           ].map(([label, value]) => <div key={label} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}><div style={{ color: '#6b7280', fontSize: 12 }}>{label}</div><strong style={{ display: 'block', marginTop: 8, fontSize: 20 }}>{value}</strong></div>)}
         </section>
-
         <section style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: 20, marginBottom: 20, overflowX: 'auto' }}>
           <h2>Employee Performance</h2>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr>{['Employee','Projects','Active','Won','Lost','Pipeline','Weighted','Contract','Collected','Outstanding','Activities','Overdue'].map(h => <th key={h} style={{ textAlign: 'left', padding: 10, borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
           <tbody>{employees.map(e => <tr key={e.employee_id}>{[e.full_name,e.projects_count,e.active_projects,e.won_projects,e.lost_projects,money(e.pipeline_value),money(e.weighted_pipeline_value),money(e.contract_value),money(e.collected_value),money(e.outstanding_value),e.activities_count,e.overdue_followups].map((v,i) => <td key={i} style={{ padding: 10, borderBottom: '1px solid #eee', whiteSpace: 'nowrap' }}>{v}</td>)}</tr>)}</tbody></table>
           {!employees.length && <p style={{ color: '#777' }}>No employee performance data yet.</p>}
         </section>
-
         <section style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: 20, overflowX: 'auto' }}>
           <h2>Project Financial Report</h2>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr>{['Project','Stage','Expected','Probability','Weighted','Contract','Required','Collected','Outstanding','Collection %'].map(h => <th key={h} style={{ textAlign: 'left', padding: 10, borderBottom: '1px solid #ddd', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
