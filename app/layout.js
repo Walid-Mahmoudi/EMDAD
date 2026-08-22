@@ -1,5 +1,6 @@
 import "./globals.css";
 import "./mobile.css";
+import LanguageToggle from "@/components/LanguageToggle";
 
 export const metadata = {
   title: "إمداد | نظام إدارة العملاء",
@@ -14,9 +15,10 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="en" dir="ltr">
       <body className="bg-paper text-ink font-body antialiased">
         {children}
+        <LanguageToggle />
       </body>
     </html>
   );
