@@ -90,7 +90,10 @@ export default function LanguageToggle() {
     const saved = localStorage.getItem('emdad-language') || 'en';
     setLang(saved);
     translateDocument(saved);
-    const observer = new MutationObserver(() => translateDocument(saved));
+    const observer = new MutationObserver(() => {
+      const current = localStorage.getItem('emdad-language') || 'en';
+      translateDocument(current);
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
