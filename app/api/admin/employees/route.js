@@ -42,32 +42,67 @@ export async function POST(request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    const { data: created, error: authError } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name, role },
-    });
+    // The email may already exist in Supabase Auth (for example, after a previous
+    // interrupted employee creation). Reuse that Auth user only when there is no
+    // existing CRM profile; never overwrite an existing employee profile here.
+    let authUser = null;
+    let createdAuthUser = false;
 
-    if (authError || !created?.user) {
-      return NextResponse.json({ error: authError?.message || 'Unable to create authentication account' }, { status: 400 });
+    const { data: usersPage, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (usersError) {
+      return NextResponse.json({ error: usersError.message }, { status: 500 });
     }
 
-    const { error: profileError } = await admin.from('profiles').upsert({
-      id: created.user.id,
+    authUser = usersPage?.users?.find((candidate) => candidate.email?.toLowerCase() === email) || null;
+
+    if (authUser) {
+      const { data: existingProfile, error: existingProfileError } = await admin
+        .from('profiles')
+        .select('id,full_name,role,is_active')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (existingProfileError) {
+        return NextResponse.json({ error: existingProfileError.message }, { status: 500 });
+      }
+
+      if (existingProfile) {
+        return NextResponse.json({ error: 'An employee with this email already exists.' }, { status: 409 });
+      }
+    } else {
+      const { data: created, error: authError } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name, role },
+      });
+
+      if (authError || !created?.user) {
+        return NextResponse.json({ error: authError?.message || 'Unable to create authentication account' }, { status: 400 });
+      }
+
+      authUser = created.user;
+      createdAuthUser = true;
+    }
+
+    const { error: profileError } = await admin.from('profiles').insert({
+      id: authUser.id,
       full_name,
       role,
       position,
       phone,
       is_active,
-    }, { onConflict: 'id' });
+    });
 
     if (profileError) {
-      await admin.auth.admin.deleteUser(created.user.id);
+      if (createdAuthUser) await admin.auth.admin.deleteUser(authUser.id);
       return NextResponse.json({ error: profileError.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, employee: { id: created.user.id, full_name, email, role, position, phone, is_active } });
+    return NextResponse.json({
+      ok: true,
+      employee: { id: authUser.id, full_name, email, role, position, phone, is_active },
+    });
   } catch (error) {
     return NextResponse.json({ error: error?.message || 'Unable to create employee' }, { status: 500 });
   }
