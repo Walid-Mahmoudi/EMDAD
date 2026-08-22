@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { CRM_STAGES, getAllowedNextStages, probabilityForStage } from '@/lib/crm/workflow';
+import { CRM_STAGES, getAllowedNextStages, probabilityForStage, canTransition } from '@/lib/crm/workflow';
 
 const sectors = ['Commercial','Residential','Banking','Administrative','Industrial','Hospitality','Hotels','Medical','Other'];
-const today = () => new Date().toISOString().slice(0,10);
 
 function Field({label,children}) { return <label className="field"><span>{label}</span>{children}</label>; }
 function Input({value,onChange,...props}) { return <input value={value??''} onChange={e=>onChange(e.target.value)} {...props}/>; }
@@ -19,7 +18,7 @@ export default function ProjectForm({data,companies,employees,isAdmin,onSave}) {
   const stageChanged=f.sales_stage!==currentStage;
 
   const changeStage=(next)=>{
-    if(!getAllowedNextStages(currentStage,isAdmin).includes(next) && next!==currentStage){
+    if(!canTransition(currentStage,next,isAdmin)){
       setFormError('This stage change is not allowed. Follow the defined sales workflow.');
       return;
     }
@@ -31,6 +30,9 @@ export default function ProjectForm({data,companies,employees,isAdmin,onSave}) {
   const submit=()=>{
     setFormError('');
     if(!f.project_name.trim() || !f.company_id){ setFormError('Project Name and Company are required.'); return; }
+    if(!canTransition(currentStage,f.sales_stage,isAdmin)){
+      setFormError('This stage change is not allowed. Follow the defined sales workflow.'); return;
+    }
     if(f.sales_stage==='Lost' && !f.lost_reason.trim()){ setFormError('Please enter a lost reason before moving the project to Lost.'); return; }
     if(['Won / Contract','Collection','Closed'].includes(f.sales_stage) && (!String(f.contract_number||'').trim() || !f.contract_date || Number(f.actual_contract_value||0)<=0)){
       setFormError('Contract Number, Contract Date and Actual Contract Value are required for this stage.'); return;
@@ -54,7 +56,7 @@ export default function ProjectForm({data,companies,employees,isAdmin,onSave}) {
     {isAdmin&&<Field label="Assigned Employee"><select value={f.assigned_employee_id||''} onChange={e=>u('assigned_employee_id',e.target.value)}><option value="">Unassigned</option>{employees.filter(e=>e.is_active).map(e=><option key={e.id} value={e.id}>{e.full_name}</option>)}</select></Field>}
     <Field label="Sales Stage"><select value={f.sales_stage} onChange={e=>changeStage(e.target.value)}>{stageOptions.map(x=><option key={x}>{x}</option>)}</select></Field>
     <Field label="Expected Value"><Input type="number" value={f.expected_value} onChange={v=>u('expected_value',v)}/></Field>
-    <Field label="Probability %"><Input type="number" min="0" max="100" value={f.probability} onChange={v=>u('probability',v)} disabled={stageChanged}/></Field>
+    <Field label="Probability %"><Input type="number" min="0" max="100" value={f.probability} onChange={v=>u('probability',v)} /></Field>
     <Field label="Actual Contract Value"><Input type="number" value={f.actual_contract_value} onChange={v=>u('actual_contract_value',v)}/></Field>
     <Field label="Contract Number"><Input value={f.contract_number} onChange={v=>u('contract_number',v)}/></Field>
     <Field label="Contract Date"><Input type="date" value={f.contract_date||''} onChange={v=>u('contract_date',v)}/></Field>
