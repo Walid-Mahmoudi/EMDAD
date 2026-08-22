@@ -2,9 +2,14 @@ name: EMDAD CRM CI
 
 on:
   push:
-    branches: [main, 'feature/**', 'fix/**']
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'chore/**'
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
