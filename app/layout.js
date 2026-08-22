@@ -1,5 +1,6 @@
 import "./globals.css";
 import "./mobile.css";
+import "./professional.css";
 import LanguageToggle from "@/components/LanguageToggle";
 
 export const metadata = {
