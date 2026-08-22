@@ -20,7 +20,7 @@ export async function middleware(request) {
         remove(name, options) {
           request.cookies.set({ name, value: "", ...options });
           response = NextResponse.next({ request });
-          response.cookies.set({ name, value: "", ...options });
+          response.cookies.set({ name, value, ...options });
         },
       },
     }
@@ -35,34 +35,40 @@ export async function middleware(request) {
   const isProtectedRoute =
     path.startsWith("/admin") || path.startsWith("/employee");
 
-  // مش مسجل دخول وعايز يدخل صفحة محمية → يرجع لصفحة الدخول
+  let profile = null;
+  if (user) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role,is_active")
+      .eq("id", user.id)
+      .single();
+    profile = data;
+  }
+
+  // No authenticated user trying to enter a protected area.
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // مسجل دخول بالفعل وعايز يدخل صفحة الدخول → يتوجه لصفحته الصح
-  if (user && isAuthRoute) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+  // Authenticated but deactivated: block the CRM and send back to login.
+  if (user && profile && profile.is_active === false) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "account_inactive");
+    return NextResponse.redirect(url);
+  }
 
+  // Authenticated user visiting login: route by role only when active.
+  if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = profile?.role === "admin" ? "/admin" : "/employee";
     return NextResponse.redirect(url);
   }
 
-  // مسجل دخول لكن بيحاول يدخل منطقة مش بتاعته (موظف يدخل /admin مثلاً)
+  // Authenticated user trying to enter an area they do not own.
   if (user && isProtectedRoute) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
     if (path.startsWith("/admin") && profile?.role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/employee";
