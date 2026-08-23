@@ -4,7 +4,10 @@ import {createClient} from '@supabase/supabase-js';
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
-const admin=createClient(url,serviceKey,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
+
+function createAdminClient(){
+  return createClient(url,serviceKey,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false},global:{headers:{Authorization:`Bearer ${serviceKey}`}}});
+}
 
 export async function POST(req){
   try{
@@ -23,6 +26,7 @@ export async function POST(req){
     const {full_name,email,password,phone,job_title}=await req.json();
     if(!full_name||!email||!password)return NextResponse.json({error:'Full name, email and password are required'},{status:400});
 
+    const admin=createAdminClient();
     const {data,error}=await admin.auth.admin.createUser({email,password,email_confirm:true});
     if(error)return NextResponse.json({error:error.message},{status:400});
 
