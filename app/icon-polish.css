@@ -1,0 +1,18 @@
+/* EMDAD CRM — premium icon polish */
+.icon-btn,.btn-primary,.btn-secondary,.lang{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary::before{content:'+';font-weight:900;font-size:18px;line-height:1}
+.lang::before{content:'◉';font-size:12px;line-height:1}
+.btn-secondary::before{content:'↪';font-weight:800;font-size:16px;line-height:1}
+.search{padding-left:40px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='6.5' fill='none' stroke='%2364748b' stroke-width='2'/%3E%3Cpath d='m16 16 5 5' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:13px center;background-size:18px}
+.cards:not(.mini)>.card{position:relative;overflow:hidden;padding-left:68px}
+.cards:not(.mini)>.card::before{position:absolute;left:20px;top:20px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#f7e9e9;color:#c83535;font-weight:900;font-size:16px}
+.cards:not(.mini)>.card:nth-child(1)::before{content:'▦'}
+.cards:not(.mini)>.card:nth-child(2)::before{content:'$'}
+.cards:not(.mini)>.card:nth-child(3)::before{content:'◇'}
+.cards:not(.mini)>.card:nth-child(4)::before{content:'✓'}
+.panel h3{display:flex;align-items:center;gap:9px}
+.panel h3::before{content:'';width:8px;height:8px;border-radius:50%;background:#c83535;box-shadow:0 0 0 5px rgba(200,53,53,.09)}
+.pill{display:inline-flex;align-items:center;gap:6px}
+.pill::before{content:'•';font-size:16px}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:20px}.sidebar{width:210px}.search{min-width:180px}}
+@media(max-width:640px){.topbar{height:auto;min-height:64px;padding:10px 14px;gap:10px}.brand{font-size:19px}.top-actions{gap:5px}.shell{display:block}.sidebar{width:100%;height:auto;position:sticky;top:64px;padding:8px;z-index:15}.sidebar nav{display:flex;overflow-x:auto;gap:4px}.sidebar button{min-width:max-content;padding:9px 10px;font-size:13px}.sidebar button::before{width:17px;height:17px;flex-basis:17px}.content{padding:16px}.heading{display:block}.heading-actions{margin-top:14px;width:100%}.search{flex:1;min-width:0;width:100%}.cards{grid-template-columns:1fr 1fr;gap:10px}.cards:not(.mini)>.card{padding:16px 14px 16px 54px}.cards:not(.mini)>.card::before{left:14px;top:16px;width:30px;height:30px}.heading h1{font-size:26px}}
