@@ -25,8 +25,6 @@ export async function POST(req) {
       );
     }
 
-    // Use the logged-in administrator JWT for all public-table operations.
-    // This makes the request satisfy the existing profiles_insert_admin RLS policy.
     const userClient = createClient(url, anonKey, {
       auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
       global: { headers: { Authorization: `Bearer ${token}` } },
@@ -64,7 +62,7 @@ export async function POST(req) {
 
     const admin = createAdminClient();
 
-    // Auth creation requires the server-side service role.
+    // Create the Auth account with the server-side service role.
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email: email.trim().toLowerCase(),
       password,
@@ -80,16 +78,15 @@ export async function POST(req) {
 
     createdUserId = created.user.id;
 
-    // IMPORTANT FIX: insert the profile with the authenticated ADMIN JWT.
-    // The existing RLS policy is: INSERT for authenticated, WITH CHECK is_admin().
-    const { error: profileError } = await userClient.from('profiles').insert({
-      id: createdUserId,
-      full_name: full_name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone?.trim() || null,
-      job_title: job_title?.trim() || null,
-      role: 'employee',
-      is_active: true,
+    // Create the profile through a SECURITY DEFINER RPC that independently
+    // verifies that the caller is an active admin. This avoids the failing
+    // PostgREST INSERT path while preserving the database-level authorization.
+    const { error: profileError } = await userClient.rpc('admin_create_employee_profile', {
+      p_id: createdUserId,
+      p_full_name: full_name.trim(),
+      p_email: email.trim().toLowerCase(),
+      p_phone: phone?.trim() || null,
+      p_job_title: job_title?.trim() || null,
     });
 
     if (profileError) {
@@ -103,6 +100,12 @@ export async function POST(req) {
 
     return NextResponse.json({ ok: true, user_id: createdUserId });
   } catch (e) {
+    if (createdUserId) {
+      try {
+        await createAdminClient().auth.admin.deleteUser(createdUserId);
+      } catch {}
+    }
+
     return NextResponse.json(
       { error: e?.message || 'Unexpected server error' },
       { status: 500 }
