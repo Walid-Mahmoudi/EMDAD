@@ -1,2 +1,2 @@
 'use client';
-export {default} from './SalesApp';
+export {default} from './SalesAppDnd';
