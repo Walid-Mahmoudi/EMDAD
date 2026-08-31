@@ -1,96 +1,163 @@
 'use client';
-import {useEffect,useMemo,useState} from 'react';
-import {useRouter} from 'next/navigation';
-import {supabase} from '../lib/supabase-browser';
 
-const modules={dashboard:'Dashboard',employees:'Employees',companies:'Companies',contacts:'Contacts',projects:'Projects',pipeline:'Pipeline',followups:'Follow-ups',contracts:'Contracts',collections:'Collections',kpis:'KPIs',reports:'Reports'};
-const stages=['lead','pricing','technical','tender','on_hand','negotiation','won','contract','collection','closed','lost'];
-const stageLabels={lead:'Lead',pricing:'Pricing',technical:'Technical',tender:'Tender',on_hand:'On Hand',negotiation:'Negotiation',won:'Won',contract:'Contract',collection:'Collection',closed:'Closed',lost:'Lost'};
-const activityTypes=['call','meeting','visit','email','whatsapp','tender_follow_up','technical_follow_up','commercial_follow_up','other'];
-const sectors=['Commercial','Residential','Banking','Administrative','Industrial','Hospitality','Hotels','Medical'];
-const empty={
- employee:{full_name:'',email:'',phone:'',job_title:'',password:''},
- company:{name:'',sector:'',company_type:'',city:'',phone:'',email:'',website:'',notes:''},
- contact:{company_id:'',full_name:'',position:'',mobile:'',email:'',contact_role:'',notes:''},
- project:{project_name:'',company_id:'',contact_id:'',employee_id:'',sector:'',project_type:'',scope:'',consultant:'',key_person:'',location:'',area:'',expected_value:'',contract_value:'',stage:'lead'},
- activity:{project_id:'',activity_type:'meeting',subject:'',description:'',outcome:'',next_follow_up_date:'',next_action:''},
- contract:{project_id:'',contract_number:'',contract_date:'',contract_value:'',attachment_url:'',notes:''},
- schedule:{project_id:'',description:'',due_date:'',amount:''},
- payment:{project_id:'',collection_schedule_id:'',payment_date:'',amount:'',reference:'',notes:''},
- kpi:{employee_id:'',name:'Sales Target',target_value:'',weight:'',period_start:'',period_end:''}
-};
+import { useEffect, useMemo, useState } from 'react';
+import { Building2, CalendarCheck, ChevronLeft, CircleDollarSign, Flame, LayoutDashboard, Menu, Phone, Plus, RefreshCw, Search, Users, X } from 'lucide-react';
+import { supabase } from '../lib/supabase-browser';
 
-export default function Home(){
- const router=useRouter();
- const [profile,setProfile]=useState(null),[tab,setTab]=useState('dashboard'),[lang,setLang]=useState('en'),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const [data,setData]=useState({profiles:[],companies:[],contacts:[],projects:[],activities:[],contracts:[],schedules:[],payments:[],kpis:[]});
- const [modal,setModal]=useState(null),[form,setForm]=useState({}),[saving,setSaving]=useState(false),[search,setSearch]=useState('');
- const t=useMemo(()=>lang==='ar'?{Dashboard:'لوحة التحكم',Employees:'الموظفون',Companies:'الشركات',Contacts:'جهات الاتصال',Projects:'المشاريع',Pipeline:'مسار المبيعات','Follow-ups':'المتابعات',Contracts:'العقود',Collections:'التحصيلات',KPIs:'مؤشرات الأداء',Reports:'التقارير',Add:'إضافة',Save:'حفظ',Cancel:'إلغاء',Logout:'تسجيل الخروج',NoData:'لا توجد بيانات بعد',Expected:'القيمة المتوقعة',Contract:'قيمة العقود',Collected:'المحصل',Today:'اليوم',Overdue:'متأخر',All:'الكل',Employee:'الموظف',Company:'الشركة',Project:'المشروع'}:{Dashboard:'Dashboard',Employees:'Employees',Companies:'Companies',Contacts:'Contacts',Projects:'Projects',Pipeline:'Pipeline','Follow-ups':'Follow-ups',Contracts:'Contracts',Collections:'Collections',KPIs:'KPIs',Reports:'Reports',Add:'Add',Save:'Save',Cancel:'Cancel',Logout:'Logout',NoData:'No data yet',Expected:'Expected Value',Contract:'Contract Value',Collected:'Collected',Today:'Today',Overdue:'Overdue',All:'All',Employee:'Employee',Company:'Company',Project:'Project'},[lang]);
+const nav = [
+  ['dashboard', 'Dashboard', LayoutDashboard],
+  ['projects', 'Projects', Building2],
+  ['pipeline', 'Pipeline', Flame],
+  ['activities', 'Activities', CalendarCheck],
+  ['companies', 'Companies', Users],
+  ['collections', 'Collections', CircleDollarSign],
+];
 
- useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser();if(!user){router.replace('/login');return}const {data:p,error:e}=await supabase.from('profiles').select('*').eq('id',user.id).maybeSingle();if(e||!p){setError(e?.message||'Profile not found');setLoading(false);return}if(!p.is_active){await supabase.auth.signOut();router.replace('/login');return}setProfile(p);setLang(localStorage.getItem('emdad_lang')||'en');await load(p);setLoading(false)})()},[]);
+const activityTypes = [
+  ['call', 'Call'], ['customer_visit', 'Customer Visit'], ['consultant_visit', 'Consultant Visit'],
+  ['meeting', 'Meeting'], ['email', 'Email'], ['follow_up', 'Follow-up'], ['collection_follow_up', 'Collection Follow-up']
+];
 
- async function load(p=profile){if(!p)return;setError('');
-   const admin=p.role==='admin';
-   const projectQ=admin?supabase.from('projects').select('*,companies(name),profiles:employee_id(full_name)').order('created_at',{ascending:false}):supabase.from('projects').select('*,companies(name),profiles:employee_id(full_name)').eq('employee_id',p.id).order('created_at',{ascending:false});
-   const projectR=await projectQ;const projects=projectR.data||[];
-   const companyIds=[...new Set(projects.map(x=>x.company_id).filter(Boolean))];
-   const contactQ=admin?supabase.from('contacts').select('*,companies(name)').order('full_name'):companyIds.length?supabase.from('contacts').select('*,companies(name)').in('company_id',companyIds).order('full_name'):null;
-   const companyQ=admin?supabase.from('companies').select('*').order('name'):companyIds.length?supabase.from('companies').select('*').in('id',companyIds).order('name'):null;
-   const projectIds=projects.map(x=>x.id);
-   const activitiesQ=admin?supabase.from('activities').select('*,projects(project_name),profiles:employee_id(full_name)').order('activity_date',{ascending:false}):projectIds.length?supabase.from('activities').select('*,projects(project_name),profiles:employee_id(full_name)').eq('employee_id',p.id).order('activity_date',{ascending:false}):null;
-   const contractsQ=projectIds.length?supabase.from('contracts').select('*,projects(project_name)').in('project_id',projectIds).order('contract_date',{ascending:false}):null;
-   const schedulesQ=projectIds.length?supabase.from('collection_schedules').select('*,projects(project_name)').in('project_id',projectIds).order('due_date'):null;
-   const paymentsQ=projectIds.length?supabase.from('payments').select('*,projects(project_name),collection_schedules(description,due_date)').in('project_id',projectIds).order('payment_date',{ascending:false}):null;
-   const kpiQ=admin?supabase.from('kpi_targets').select('*,profiles:employee_id(full_name)').order('created_at',{ascending:false}):supabase.from('kpi_targets').select('*,profiles:employee_id(full_name)').eq('employee_id',p.id).order('created_at',{ascending:false});
-   const profilesQ=admin?supabase.from('profiles').select('*').order('full_name'):supabase.from('profiles').select('*').eq('id',p.id);
-   const [companiesR,contactsR,activitiesR,contractsR,schedulesR,paymentsR,kpisR,profilesR]=await Promise.all([companyQ,contactQ,activitiesQ,contractsQ,schedulesQ,paymentsQ,kpiQ,profilesQ]);
-   setData({profiles:profilesR?.data||[],companies:companiesR?.data||[],contacts:contactsR?.data||[],projects,activities:activitiesR?.data||[],contracts:contractsR?.data||[],schedules:schedulesR?.data||[],payments:paymentsR?.data||[],kpis:kpisR?.data||[]});
-   const firstErr=[projectR,companiesR,contactsR,activitiesR,contractsR,schedulesR,paymentsR,kpisR].find(r=>r?.error);if(firstErr)setError(firstErr.error.message);
- }
- function open(kind,initial={}){setNotice('');setError('');setForm({...empty[kind],...initial});setModal(kind)}
- function close(){setModal(null);setForm({})}
- function set(k,v){setForm(f=>({...f,[k]:v}))}
- async function save(){setSaving(true);setError('');setNotice('');const kind=modal;
-   try{
-     if(kind==='employee'){const {data:{session}}=await supabase.auth.getSession();const r=await fetch('/api/admin/employees',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session?.access_token||''}`},body:JSON.stringify(form)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Unable to create employee');setNotice('Employee created');close();await load();setSaving(false);return}
-     const map={company:'companies',contact:'contacts',project:'projects',activity:'activities',contract:'contracts',schedule:'collection_schedules',payment:'payments',kpi:'kpi_targets'};const table=map[kind];let payload={...form};
-     if(kind==='project'&&profile.role!=='admin')throw new Error('Only administrators can create projects.');
-     if(kind==='company'&&profile.role!=='admin')throw new Error('Only administrators can create companies.');
-     if(kind==='contact'&&profile.role!=='admin')throw new Error('Only administrators can create contacts.');
-     if(kind==='activity')payload.employee_id=profile.id;
-     if(kind==='payment')payload.employee_id=profile.id;
-     if(kind==='contract'){
-       const pr=data.projects.find(x=>x.id===payload.project_id);if(pr)payload.contract_value=Number(payload.contract_value||0);
-     }
-     for(const k of Object.keys(payload))if(payload[k]==='')payload[k]=null;
-     for(const k of ['area','expected_value','contract_value','amount','target_value','weight'])if(k in payload&&payload[k]!==null)payload[k]=Number(payload[k]);
-     const {error:e}=await supabase.from(table).insert(payload);if(e)throw new Error(e.message);
-     if(kind==='contract'&&payload.project_id){await supabase.from('projects').update({stage:'contract',contract_value:payload.contract_value||0}).eq('id',payload.project_id)}
-     setNotice('Saved successfully');close();await load();
-   }catch(e){setError(e.message)}setSaving(false)
- }
- async function updateStage(project,newStage){if(project.stage===newStage)return;setError('');const {error:e}=await supabase.from('projects').update({stage:newStage}).eq('id',project.id);if(e){setError(e.message);return}await supabase.from('project_stage_history').insert({project_id:project.id,from_stage:project.stage,to_stage:newStage,changed_by:profile.id});await load()}
- async function logout(){await supabase.auth.signOut();router.replace('/login')}
- if(loading)return <div className="loading-screen">EMDAD CRM</div>;
- const totals={projects:data.projects.length,pipeline:data.projects.filter(x=>!['closed','lost'].includes(x.stage)).reduce((a,x)=>a+Number(x.expected_value||0),0),contract:data.projects.reduce((a,x)=>a+Number(x.contract_value||0),0),collected:data.payments.reduce((a,x)=>a+Number(x.amount||0),0)};
- const adminOnly=['employees','companies','contacts','projects','kpis'];
- const canAdd=tab!=='dashboard'&&tab!=='reports'&&tab!=='pipeline'&&(profile.role==='admin'||!adminOnly.includes(tab));
- const addKind={employees:'employee',companies:'company',contacts:'contact',projects:'project',followups:'activity',contracts:'contract',collections:'payment',kpis:'kpi'}[tab];
- return <main dir={lang==='ar'?'rtl':'ltr'} className="app">
-   <header className="topbar"><div><div className="brand">EMDAD <span>CRM</span></div><small>{profile.full_name} · {profile.role==='admin'?'Administrator':'Sales Employee'}</small></div><div className="top-actions"><button className="lang" onClick={()=>{const n=lang==='en'?'ar':'en';setLang(n);localStorage.setItem('emdad_lang',n)}}>{lang==='en'?'العربية':'English'}</button><button className="btn btn-secondary" onClick={logout}>{t.Logout}</button></div></header>
-   <div className="shell"><aside className="sidebar"><nav>{Object.entries(modules).map(([k,v])=><button key={k} className={tab===k?'active':''} onClick={()=>{setTab(k);setSearch('')}}>{t[v]||v}</button>)}</nav></aside>
-   <section className="content"><div className="heading"><div><h1>{t[modules[tab]]||modules[tab]}</h1><p>{lang==='ar'?'إدارة المبيعات والمشاريع والمتابعات والتحصيلات في مكان واحد':'Manage sales, projects, follow-ups and collections in one place.'}</p></div><div className="heading-actions">{tab!=='dashboard'&&tab!=='reports'&&<input className="search" placeholder={lang==='ar'?'بحث...':'Search...'} value={search} onChange={e=>setSearch(e.target.value)}/>} {canAdd&&<button className="btn btn-primary" onClick={()=>open(addKind)}>+ {t.Add}</button>}</div></div>
-   {error&&<div className="alert">{error}</div>}{notice&&<div className="success">{notice}</div>}
-   {tab==='dashboard'?<Dashboard totals={totals} data={data} t={t} lang={lang}/>:tab==='pipeline'?<Pipeline data={data} updateStage={updateStage} search={search} lang={lang}/>:tab==='reports'?<Reports data={data} lang={lang}/>:<Module tab={tab} data={data} t={t} search={search} lang={lang}/>}</section></div>
-   {modal&&<Modal kind={modal} form={form} set={set} data={data} t={t} onClose={close} onSave={save} saving={saving} profile={profile}/>}</main>
+const emptyProject = { name: '', company_id: '', project_type: '', hvac_scope: '', estimated_value: '', win_probability: '20', temperature: 'cold', status: 'new', source: 'manual', expected_closing_date: '', next_action: '', next_action_date: '', notes: '' };
+const emptyActivity = { company_id: '', project_id: '', type: 'call', subject: '', result: '', next_action: '', next_action_date: '', activity_at: new Date().toISOString().slice(0, 16) };
+
+function money(v) { return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Number(v || 0)); }
+function dateLabel(v) { if (!v) return '—'; return new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+
+export default function Home() {
+  const [tab, setTab] = useState('dashboard');
+  const [data, setData] = useState({ companies: [], projects: [], pipeline: [], activities: [], collections: [] });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [mobileNav, setMobileNav] = useState(false);
+
+  async function load() {
+    setRefreshing(true); setError('');
+    const [companies, projects, pipeline, activities, collections] = await Promise.all([
+      supabase.from('companies').select('*').order('name'),
+      supabase.from('projects').select('*, companies(name)').order('created_at', { ascending: false }),
+      supabase.from('pipeline').select('*, projects(name, companies(name))').order('added_at', { ascending: false }),
+      supabase.from('activities').select('*, companies(name), projects(name)').order('activity_at', { ascending: false }),
+      supabase.from('collections').select('*, projects(name, companies(name))').order('due_date'),
+    ]);
+    const firstError = [companies, projects, pipeline, activities, collections].find(x => x.error);
+    if (firstError) setError(firstError.error.message);
+    setData({ companies: companies.data || [], projects: projects.data || [], pipeline: pipeline.data || [], activities: activities.data || [], collections: collections.data || [] });
+    setLoading(false); setRefreshing(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  const stats = useMemo(() => {
+    const start = new Date(); start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); start.setHours(0,0,0,0);
+    const weekActivities = data.activities.filter(a => new Date(a.activity_at) >= start && a.status === 'completed');
+    const activeProjects = data.projects.filter(p => !['won','lost','cancelled'].includes(p.status));
+    const hot = activeProjects.filter(p => p.temperature === 'hot');
+    return {
+      newProjects: data.projects.filter(p => new Date(p.received_at) >= start).length,
+      pipelineAdded: data.pipeline.filter(p => new Date(p.added_at) >= start).length,
+      hot: hot.length,
+      calls: weekActivities.filter(a => a.type === 'call').length,
+      visits: weekActivities.filter(a => ['customer_visit','consultant_visit'].includes(a.type)).length,
+      consultantVisits: weekActivities.filter(a => a.type === 'consultant_visit').length,
+      pipelineValue: data.pipeline.filter(p => p.status === 'active').reduce((s,p) => s + Number(p.value || 0), 0),
+      weighted: data.pipeline.filter(p => p.status === 'active').reduce((s,p) => s + Number(p.value || 0) * Number(p.probability || 0) / 100, 0),
+      collected: data.collections.reduce((s,c) => s + Number(c.amount_collected || 0), 0),
+      remaining: data.collections.reduce((s,c) => s + Math.max(0, Number(c.amount_due || 0) - Number(c.amount_collected || 0)), 0),
+    };
+  }, [data]);
+
+  function openModal(kind, initial = {}) { setNotice(''); setError(''); setForm(kind === 'project' ? { ...emptyProject, ...initial } : { ...emptyActivity, ...initial }); setModal(kind); }
+  function closeModal() { setModal(null); setForm({}); }
+  function setField(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  async function save() {
+    setSaving(true); setError('');
+    try {
+      if (modal === 'project') {
+        const payload = { ...form, estimated_value: form.estimated_value ? Number(form.estimated_value) : null, win_probability: Number(form.win_probability || 0), expected_closing_date: form.expected_closing_date || null, next_action_date: form.next_action_date || null };
+        const { data: project, error: e } = await supabase.from('projects').insert(payload).select().single();
+        if (e) throw e;
+        if (Number(project.win_probability) > 50) await supabase.from('pipeline').insert({ project_id: project.id, value: project.estimated_value || 0, probability: project.win_probability, expected_closing_date: project.expected_closing_date });
+      } else {
+        const payload = { ...form, activity_at: new Date(form.activity_at).toISOString(), next_action_date: form.next_action_date || null, company_id: form.company_id || null, project_id: form.project_id || null };
+        const { error: e } = await supabase.from('activities').insert(payload); if (e) throw e;
+        if (payload.project_id && payload.next_action_date) await supabase.from('projects').update({ last_follow_up_at: payload.activity_at, next_action: payload.next_action, next_action_date: payload.next_action_date }).eq('id', payload.project_id);
+      }
+      closeModal(); setNotice('Saved successfully'); await load();
+    } catch (e) { setError(e.message || 'Unable to save'); }
+    setSaving(false);
+  }
+
+  const filteredProjects = data.projects.filter(p => `${p.name} ${p.companies?.name || ''}`.toLowerCase().includes(search.toLowerCase()));
+  const filteredCompanies = data.companies.filter(c => `${c.name} ${c.city || ''}`.toLowerCase().includes(search.toLowerCase()));
+
+  return <div className="crm-shell">
+    <aside className={`sidebar ${mobileNav ? 'open' : ''}`}>
+      <div className="brand"><span className="brand-mark">E</span><div><strong>EMDAD</strong><small>SALES CRM</small></div></div>
+      <nav>{nav.map(([id, label, Icon]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setMobileNav(false); }}><Icon size={18}/><span>{label}</span></button>)}</nav>
+      <div className="sidebar-note"><b>Personal Workspace</b><span>Built around your daily HVAC sales workflow.</span></div>
+    </aside>
+
+    <section className="main-area">
+      <header className="topbar"><button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={22}/></button><div><span className="eyebrow">SALES OPERATING SYSTEM</span><h1>{nav.find(x => x[0] === tab)?.[1] || 'Dashboard'}</h1></div><div className="top-actions"><div className="search-box"><Search size={17}/><input placeholder="Search projects or companies..." value={search} onChange={e => setSearch(e.target.value)}/></div><button className="icon-btn" onClick={load} title="Refresh"><RefreshCw size={18} className={refreshing ? 'spin' : ''}/></button><button className="primary-btn" onClick={() => openModal(tab === 'activities' ? 'activity' : 'project')}><Plus size={18}/> Quick Add</button></div></header>
+
+      <main className="content">
+        {error && <div className="alert error">{error}<button onClick={() => setError('')}><X size={16}/></button></div>}
+        {notice && <div className="alert success">{notice}</div>}
+        {loading ? <div className="empty-state"><RefreshCw className="spin"/><p>Loading CRM...</p></div> : <>
+          {tab === 'dashboard' && <Dashboard stats={stats} data={data} onAddActivity={() => openModal('activity')} onAddProject={() => openModal('project')} setTab={setTab}/>} 
+          {tab === 'projects' && <Projects projects={filteredProjects} onAdd={() => openModal('project')} setTab={setTab}/>} 
+          {tab === 'pipeline' && <Pipeline pipeline={data.pipeline} setTab={setTab}/>} 
+          {tab === 'activities' && <Activities activities={data.activities} onAdd={() => openModal('activity')}/>} 
+          {tab === 'companies' && <Companies companies={filteredCompanies}/>} 
+          {tab === 'collections' && <Collections collections={data.collections} stats={stats}/>} 
+        </>}
+      </main>
+    </section>
+
+    {modal && <Modal title={modal === 'project' ? 'New Project' : 'Log Activity'} onClose={closeModal} onSave={save} saving={saving}>
+      {modal === 'project' ? <ProjectForm form={form} setField={setField} companies={data.companies}/> : <ActivityForm form={form} setField={setField} companies={data.companies} projects={data.projects}/>} 
+    </Modal>}
+  </div>;
 }
 
-function Dashboard({totals,data,t,lang}){const today=new Date().toISOString().slice(0,10);const overdue=data.activities.filter(a=>a.next_follow_up_date&&a.next_follow_up_date.slice(0,10)<today);const todayF=data.activities.filter(a=>a.next_follow_up_date&&a.next_follow_up_date.slice(0,10)===today);return <><div className="cards"><Metric label={t.Projects} value={totals.projects}/><Metric label={t.Expected} value={money(totals.pipeline)}/><Metric label={t.Contract} value={money(totals.contract)}/><Metric label={t.Collected} value={money(totals.collected)}/></div><div className="grid2"><div className="panel"><h3>Pipeline</h3>{stages.map(s=><div className="barrow" key={s}><span>{stageLabels[s]}</span><b>{data.projects.filter(p=>p.stage===s).length}</b></div>)}</div><div className="panel"><h3>{lang==='ar'?'المتابعات':'Follow-ups'}</h3><div className="cards mini"><Metric label={lang==='ar'?'اليوم':'Today'} value={todayF.length}/><Metric label={lang==='ar'?'متأخر':'Overdue'} value={overdue.length}/></div>{[...todayF,...overdue].slice(0,6).map(a=><div className="listrow" key={a.id}><div><b>{a.subject||a.activity_type}</b><small>{a.projects?.project_name||''} · {a.next_follow_up_date?.slice(0,10)||''}</small></div><span className="pill">{a.activity_type}</span></div>)}</div></div><div className="panel"><h3>{lang==='ar'?'أفضل الفرص':'Top Opportunities'}</h3>{data.projects.filter(p=>!['closed','lost'].includes(p.stage)).sort((a,b)=>Number(b.expected_value||0)-Number(a.expected_value||0)).slice(0,8).map(p=><div className="listrow" key={p.id}><div><b>{p.project_name}</b><small>{p.companies?.name||''} · {stageLabels[p.stage]||p.stage}</small></div><strong>{money(p.expected_value)}</strong></div>)}</div></>}
-function Pipeline({data,updateStage,search,lang}){const q=search.toLowerCase();return <div className="kanban">{stages.map(stage=><div className="kanban-col" key={stage}><div className="kanban-head"><b>{stageLabels[stage]}</b><span>{data.projects.filter(p=>p.stage===stage&&(`${p.project_name} ${p.companies?.name||''}`).toLowerCase().includes(q)).length}</span></div>{data.projects.filter(p=>p.stage===stage&&(`${p.project_name} ${p.companies?.name||''}`).toLowerCase().includes(q)).map(p=><div className="deal" key={p.id}><b>{p.project_name}</b><small>{p.companies?.name||''}</small><strong>{money(p.expected_value)}</strong><select value={p.stage} onChange={e=>updateStage(p,e.target.value)}>{stages.map(s=><option key={s} value={s}>{stageLabels[s]}</option>)}</select></div>)}{!data.projects.some(p=>p.stage===stage)&&<div className="empty small">{lang==='ar'?'فارغ':'Empty'}</div>}</div>)}</div>}
-function Reports({data,lang}){return <div className="panel"><h3>{lang==='ar'?'أداء الموظفين':'Employee Performance'}</h3><div className="table-wrap"><table className="table"><thead><tr><th>Employee</th><th>Projects</th><th>Pipeline</th><th>Contract</th><th>Collected</th></tr></thead><tbody>{data.profiles.filter(p=>p.role==='employee').map(e=>{const ps=data.projects.filter(p=>p.employee_id===e.id);const col=data.payments.filter(x=>x.employee_id===e.id).reduce((a,x)=>a+Number(x.amount||0),0);return <tr key={e.id}><td>{e.full_name}</td><td>{ps.length}</td><td>{money(ps.reduce((a,x)=>a+Number(x.expected_value||0),0))}</td><td>{money(ps.reduce((a,x)=>a+Number(x.contract_value||0),0))}</td><td>{money(col)}</td></tr>})}</tbody></table></div></div>}
-function Module({tab,data,t,search}){const configs={employees:['profiles',['full_name','email','phone','job_title','role','is_active']],companies:['companies',['name','sector','company_type','city','phone','email']],contacts:['contacts',['full_name','company','position','mobile','email','contact_role']],projects:['projects',['project_name','company','employee','stage','expected_value','contract_value']],followups:['activities',['project','employee','activity_type','activity_date','subject','next_follow_up_date','next_action']],contracts:['contracts',['project','contract_number','contract_date','contract_value']],collections:['payments',['project','payment_date','amount','reference']],kpis:['kpis',['employee','name','target_value','weight']]};const c=configs[tab];const rows=(data[c?.[0]]||[]).filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));return <div className="panel"><div className="table-wrap"><table className="table"><thead><tr>{(c?.[1]||[]).map(x=><th key={x}>{x.replaceAll('_',' ')}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.id}>{(c?.[1]||[]).map(k=><td key={k}>{display(r,k)}</td>)}</tr>)}</tbody></table></div>{!rows.length&&<div className="empty">{t.NoData}</div>}</div>}
-function display(r,k){if(k==='company')return r.companies?.name||'—';if(k==='employee')return r.profiles?.full_name||'—';if(k==='project')return r.projects?.project_name||'—';if(k==='is_active')return r[k]?'Active':'Inactive';if(k==='stage')return stageLabels[r[k]]||r[k]||'—';if(['expected_value','contract_value','amount','target_value'].includes(k))return money(r[k]);if(['activity_date','next_follow_up_date','contract_date','payment_date'].includes(k))return r[k]?String(r[k]).slice(0,10):'—';return r[k]||'—'}
-function Modal({kind,form,set,data,t,onClose,onSave,saving,profile}){const fields={employee:[['full_name','Full name'],['email','Email','email'],['password','Temporary password','password'],['phone','Phone'],['job_title','Job title']],company:[['name','Company name'],['sector','Sector','sector'],['company_type','Company type'],['city','City'],['phone','Phone'],['email','Email','email'],['website','Website'],['notes','Notes']],contact:[['company_id','Company','company'],['full_name','Full name'],['position','Position'],['mobile','Mobile'],['email','Email','email'],['contact_role','Role'],['notes','Notes']],project:[['project_name','Project name'],['company_id','Company','company'],['contact_id','Contact','contact'],['employee_id','Employee','employee'],['sector','Sector','sector'],['project_type','Project type'],['scope','Scope'],['consultant','Consultant'],['key_person','Key person'],['location','Location'],['area','Area','number'],['expected_value','Expected value','number'],['contract_value','Contract value','number'],['stage','Stage','stage']],activity:[['project_id','Project','project'],['activity_type','Activity type','activity'],['subject','Subject'],['description','Description'],['outcome','Outcome'],['next_follow_up_date','Next follow-up','datetime-local'],['next_action','Next action']],contract:[['project_id','Project','project'],['contract_number','Contract number'],['contract_date','Contract date','date'],['contract_value','Contract value','number'],['attachment_url','Contract file URL'],['notes','Notes']],schedule:[['project_id','Project','project'],['description','Description'],['due_date','Due date','date'],['amount','Amount','number']],payment:[['project_id','Project','project'],['collection_schedule_id','Schedule','schedule'],['payment_date','Payment date','date'],['amount','Amount','number'],['reference','Reference'],['notes','Notes']],kpi:[['employee_id','Employee','employee'],['name','KPI name'],['target_value','Target','number'],['weight','Weight %','number'],['period_start','Start','date'],['period_end','End','date']]};return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h2>{t.Add} {kind}</h2><button onClick={onClose}>×</button></div><div className="form-grid">{fields[kind].map(([k,label,type])=><Field key={k} k={k} label={label} type={type} value={form[k]} set={set} data={data}/>) }<div className="modal-actions"><button className="btn btn-secondary" onClick={onClose}>{t.Cancel}</button><button className="btn btn-primary" onClick={onSave} disabled={saving}>{saving?'Saving…':t.Save}</button></div></div></div></div>}
-function Field({k,label,type,value,set,data}){if(type==='sector')return <div className="field"><label>{label}</label><select value={value||''} onChange={e=>set(k,e.target.value)}><option value="">Select...</option>{sectors.map(x=><option key={x}>{x}</option>)}</select></div>;if(['company','contact','employee','project','schedule','activity','stage'].includes(type)){let source=type==='company'?data.companies:type==='contact'?data.contacts:type==='employee'?data.profiles.filter(x=>x.role==='employee'):type==='project'?data.projects:type==='schedule'?data.schedules:[];let opts=type==='stage'?stages.map(x=>({id:x,name:stageLabels[x]})):type==='activity'?activityTypes.map(x=>({id:x,name:x})):source.map(x=>({id:x.id,name:x.name||x.full_name||x.project_name||x.description}));return <div className="field"><label>{label}</label><select value={value||''} onChange={e=>set(k,e.target.value)}><option value="">Select...</option>{opts.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div>}return <div className="field"><label>{label}</label><input type={type||'text'} value={value||''} onChange={e=>set(k,e.target.value)} /></div>}
-function Metric({label,value}){return <div className="card"><span className="card-label">{label}</span><strong className="card-value">{value}</strong></div>}
-function money(n){return `EGP ${Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0})}`}
+function Dashboard({ stats, data, onAddActivity, onAddProject, setTab }) {
+  const due = data.projects.filter(p => p.next_action_date && new Date(p.next_action_date) <= new Date()).slice(0,5);
+  const hot = data.projects.filter(p => p.temperature === 'hot' && !['won','lost','cancelled'].includes(p.status)).slice(0,5);
+  return <>
+    <div className="welcome"><div><span className="eyebrow">MONDAY, SALES COMMAND CENTER</span><h2>Good day. Here is what needs your attention.</h2><p>Keep projects moving, follow-ups visible, and your weekly numbers ready.</p></div><div className="welcome-actions"><button className="secondary-btn" onClick={onAddActivity}><Phone size={17}/> Log activity</button><button className="primary-btn" onClick={onAddProject}><Plus size={17}/> New project</button></div></div>
+    <div className="stats-grid">
+      <Stat title="New Projects" value={stats.newProjects} sub="this week" icon={Building2}/><Stat title="Pipeline Added" value={stats.pipelineAdded} sub="this week" icon={Flame}/><Stat title="Hot Projects" value={stats.hot} sub="active now" icon={Flame} hot/><Stat title="Calls" value={stats.calls} sub="this week" icon={Phone}/><Stat title="Consultant Visits" value={stats.consultantVisits} sub="this week" icon={Users}/>
+    </div>
+    <div className="grid-2">
+      <section className="card"><div className="card-head"><div><span className="eyebrow">ATTENTION</span><h3>My Follow-ups</h3></div><button className="link-btn" onClick={() => setTab('projects')}>View projects <ChevronLeft size={15}/></button></div>{due.length ? <div className="list">{due.map(p => <div className="list-row" key={p.id}><div><b>{p.name}</b><span>{p.companies?.name || 'No company'} · {p.next_action || 'Follow-up'}</span></div><strong className="overdue">{dateLabel(p.next_action_date)}</strong></div>)}</div> : <Empty text="No follow-ups due. Nice."/>}</section>
+      <section className="card"><div className="card-head"><div><span className="eyebrow">PRIORITY</span><h3>Hot Projects</h3></div><button className="link-btn" onClick={() => setTab('pipeline')}>Open pipeline <ChevronLeft size={15}/></button></div>{hot.length ? <div className="list">{hot.map(p => <div className="list-row" key={p.id}><div><b>{p.name}</b><span>{p.companies?.name || 'No company'}</span></div><strong>{money(p.estimated_value)} EGP</strong></div>)}</div> : <Empty text="No hot projects yet."/>}</section>
+    </div>
+    <div className="stats-wide"><Metric label="Active Pipeline" value={`${money(stats.pipelineValue)} EGP`} note={`Weighted ${money(stats.weighted)} EGP`}/><Metric label="Collected" value={`${money(stats.collected)} EGP`} note="All collections"/><Metric label="Remaining" value={`${money(stats.remaining)} EGP`} note="Open receivables"/></div>
+  </>;
+}
+
+function Stat({ title, value, sub, icon: Icon, hot }) { return <div className="stat-card"><div className={`stat-icon ${hot ? 'hot' : ''}`}><Icon size={19}/></div><span>{title}</span><strong>{value}</strong><small>{sub}</small></div>; }
+function Metric({label,value,note}) { return <div className="metric"><span>{label}</span><strong>{value}</strong><small>{note}</small></div>; }
+function Empty({text}) { return <div className="empty-mini">{text}</div>; }
+
+function Projects({ projects, onAdd, setTab }) { return <section className="card"><div className="card-head"><div><span className="eyebrow">OPPORTUNITIES</span><h3>Projects</h3></div><button className="primary-btn" onClick={onAdd}><Plus size={17}/> New project</button></div><div className="table-wrap"><table><thead><tr><th>Project</th><th>Company</th><th>Stage</th><th>Temperature</th><th>Value</th><th>Next Action</th></tr></thead><tbody>{projects.length ? projects.map(p => <tr key={p.id}><td><b>{p.name}</b><small>{p.project_type || 'HVAC project'}</small></td><td>{p.companies?.name || '—'}</td><td><span className="pill">{p.status.replaceAll('_',' ')}</span></td><td><span className={`temp ${p.temperature}`}>{p.temperature}</span></td><td>{money(p.estimated_value)} EGP</td><td>{p.next_action ? <><b>{p.next_action}</b><small>{dateLabel(p.next_action_date)}</small></> : '—'}</td></tr>) : <tr><td colSpan="6"><Empty text="No projects yet. Add your first project."/></td></tr>}</tbody></table></div></section>; }
+
+function Pipeline({ pipeline, setTab }) { const cols=['active','won','lost','on_hold']; const labels={active:'Active',won:'Won',lost:'Lost',on_hold:'On Hold'}; return <div className="kanban">{cols.map(col => <section className="kanban-col" key={col}><div className="kanban-head"><b>{labels[col]}</b><span>{pipeline.filter(p=>p.status===col).length}</span></div>{pipeline.filter(p=>p.status===col).map(p => <div className="deal-card" key={p.id}><span className={`temp ${p.projects?.temperature || 'cold'}`}>{p.projects?.temperature || 'cold'}</span><h4>{p.projects?.name || 'Project'}</h4><p>{p.projects?.companies?.name || '—'}</p><strong>{money(p.value)} EGP</strong><small>{Number(p.probability || 0)}% probability · {dateLabel(p.expected_closing_date)}</small></div>)}</section>)}</div>; }
+
+function Activities({ activities, onAdd }) { return <section className="card"><div className="card-head"><div><span className="eyebrow">SALES ACTIVITY</span><h3>Calls, visits & meetings</h3></div><button className="primary-btn" onClick={onAdd}><Plus size={17}/> Log activity</button></div><div className="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Company</th><th>Project</th><th>Result</th><th>Next Action</th></tr></thead><tbody>{activities.length ? activities.slice(0,50).map(a => <tr key={a.id}><td>{dateLabel(a.activity_at)}</td><td><span className="pill">{a.type.replaceAll('_',' ')}</span></td><td>{a.companies?.name || '—'}</td><td>{a.projects?.name || 'General'}</td><td>{a.result || '—'}</td><td>{a.next_action ? <><b>{a.next_action}</b><small>{dateLabel(a.next_action_date)}</small></> : '—'}</td></tr>) : <tr><td colSpan="6"><Empty text="No activities recorded yet."/></td></tr>}</tbody></table></div></section>; }
+
+function Companies({ companies }) { return <section className="card"><div className="card-head"><div><span className="eyebrow">ACCOUNTS</span><h3>Companies</h3></div></div><div className="company-grid">{companies.length ? companies.map(c => <div className="company-card" key={c.id}><div className="company-avatar"><Building2 size={18}/></div><div><b>{c.name}</b><span>{c.company_type} · {c.city || 'Egypt'}</span><small>{c.phone || c.email || 'No contact details'}</small></div></div>) : <Empty text="No companies yet."/>}</div></section>; }
+function Collections({ collections, stats }) { return <><div className="stats-wide"><Metric label="Collected" value={`${money(stats.collected)} EGP`} note="Recorded payments"/><Metric label="Remaining" value={`${money(stats.remaining)} EGP`} note="Amount still due"/></div><section className="card"><div className="card-head"><div><span className="eyebrow">CASH FLOW</span><h3>Collections</h3></div></div><div className="table-wrap"><table><thead><tr><th>Project</th><th>Due Date</th><th>Due</th><th>Collected</th><th>Status</th><th>Next Follow-up</th></tr></thead><tbody>{collections.length ? collections.map(c => <tr key={c.id}><td><b>{c.projects?.name || '—'}</b><small>{c.projects?.companies?.name || ''}</small></td><td>{dateLabel(c.due_date)}</td><td>{money(c.amount_due)} EGP</td><td>{money(c.amount_collected)} EGP</td><td><span className="pill">{c.status.replaceAll('_',' ')}</span></td><td>{dateLabel(c.next_follow_up_date)}</td></tr>) : <tr><td colSpan="6"><Empty text="No collections recorded yet."/></td></tr>}</tbody></table></div></section></>; }
+
+function Modal({ title, onClose, onSave, saving, children }) { return <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h3>{title}</h3><button onClick={onClose}><X size={19}/></button></div><div className="modal-body">{children}</div><div className="modal-foot"><button className="secondary-btn" onClick={onClose}>Cancel</button><button className="primary-btn" onClick={onSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button></div></div></div>; }
+function Field({label,children}) { return <label className="field"><span>{label}</span>{children}</label>; }
+function ProjectForm({form,setField,companies}) { return <div className="form-grid"><Field label="Project Name"><input value={form.name} onChange={e=>setField('name',e.target.value)} placeholder="e.g. New Hospital HVAC"/></Field><Field label="Company"><select value={form.company_id} onChange={e=>setField('company_id',e.target.value)}><option value="">Select company</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></Field><Field label="Estimated Value (EGP)"><input type="number" value={form.estimated_value} onChange={e=>setField('estimated_value',e.target.value)}/></Field><Field label="Win Probability %"><input type="number" min="0" max="100" value={form.win_probability} onChange={e=>setField('win_probability',e.target.value)}/></Field><Field label="Temperature"><select value={form.temperature} onChange={e=>setField('temperature',e.target.value)}><option value="cold">Cold</option><option value="warm">Warm</option><option value="hot">Hot</option></select></Field><Field label="Project Type"><input value={form.project_type} onChange={e=>setField('project_type',e.target.value)} placeholder="VRF / Chiller / AHU..."/></Field><Field label="Expected Closing"><input type="date" value={form.expected_closing_date} onChange={e=>setField('expected_closing_date',e.target.value)}/></Field><Field label="Next Action Date"><input type="date" value={form.next_action_date} onChange={e=>setField('next_action_date',e.target.value)}/></Field><Field label="Next Action"><input value={form.next_action} onChange={e=>setField('next_action',e.target.value)} placeholder="Follow up quotation"/></Field><Field label="HVAC Scope"><input value={form.hvac_scope} onChange={e=>setField('hvac_scope',e.target.value)} placeholder="VRF, Chillers, Package..."/></Field><Field label="Notes" wide><textarea rows="3" value={form.notes} onChange={e=>setField('notes',e.target.value)}/></Field></div>; }
+function ActivityForm({form,setField,companies,projects}) { return <div className="form-grid"><Field label="Activity Type"><select value={form.type} onChange={e=>setField('type',e.target.value)}>{activityTypes.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></Field><Field label="Date & Time"><input type="datetime-local" value={form.activity_at} onChange={e=>setField('activity_at',e.target.value)}/></Field><Field label="Company"><select value={form.company_id} onChange={e=>setField('company_id',e.target.value)}><option value="">General activity</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></Field><Field label="Project"><select value={form.project_id} onChange={e=>setField('project_id',e.target.value)}><option value="">No specific project</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field><Field label="Subject" wide><input value={form.subject} onChange={e=>setField('subject',e.target.value)} placeholder="What happened?"/></Field><Field label="Result" wide><textarea rows="3" value={form.result} onChange={e=>setField('result',e.target.value)} placeholder="Client response / meeting outcome..."/></Field><Field label="Next Action"><input value={form.next_action} onChange={e=>setField('next_action',e.target.value)} placeholder="Call client / send revision"/></Field><Field label="Next Action Date"><input type="date" value={form.next_action_date} onChange={e=>setField('next_action_date',e.target.value)}/></Field></div>; }
