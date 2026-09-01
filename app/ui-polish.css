@@ -1,0 +1,41 @@
+/* Final visual polish layer: presentation only, no data/workflow changes. */
+.brand strong{font-size:0;letter-spacing:0}
+.brand strong::after{content:'EMDAD CRM';font-size:15px;letter-spacing:-.02em}
+.brand span{font-size:9px}
+.target-card{display:none}
+.side{padding-top:18px}
+.brand{padding-bottom:22px}
+.side-search{margin-bottom:20px;background:#f8faff}
+.side-title{font-size:8px;letter-spacing:.14em}
+.side nav button{height:41px}
+.side nav button.selected{box-shadow:inset 3px 0 0 var(--blue)}
+.top{height:62px;padding-left:30px}
+.top-tabs{gap:20px}
+.top-tabs button{font-size:11px}
+.global{background:#f8faff;border-color:#e4e8f1}
+.page{padding-top:24px}
+.page-head h1{font-size:27px}
+.hero{background:linear-gradient(135deg,#fff 0%,#f8faff 100%);border-color:#e4e9f3;padding:26px 27px}
+.hero h2{font-size:24px}
+.stats{gap:10px}
+.stat{padding:15px 16px;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.stat:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(18,31,53,.06);border-color:#dce3f0}
+.panel{box-shadow:0 1px 2px rgba(18,31,53,.025),0 8px 26px rgba(18,31,53,.025)}
+.panel-head{height:48px}
+.panel-head b{font-size:11px}
+.cash{margin-top:14px}
+.cash-card{background:#18243b;padding:17px 18px}
+.table-panel{border-radius:12px}
+th{padding-top:13px;padding-bottom:13px}
+td{padding-top:13px;padding-bottom:13px}
+.company{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.company:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(18,31,53,.05);border-color:#dce3f0}
+.deal{transition:transform .14s ease,box-shadow .14s ease}
+.deal:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(18,31,53,.07)}
+.stage{background:#f4f6fa}
+.modal-bg{backdrop-filter:blur(2px)}
+.modal{border:1px solid #e4e8ef}
+.primary{box-shadow:0 5px 12px rgba(49,94,251,.14)}
+.primary-icon{box-shadow:0 5px 12px rgba(49,94,251,.16)}
+@media(max-width:900px){.side{padding:14px}.brand{padding-bottom:16px}.side-search{margin-bottom:14px}.side nav button{height:38px}.top{height:58px;padding:0 14px}.page-head h1{font-size:23px}}
+@media(max-width:620px){.page{padding:16px 13px 30px}.hero{padding:20px}.hero h2{font-size:21px}.stats{gap:9px}.stat b{font-size:19px}.cash-card{padding:15px 16px}.modal-bg{padding:10px}}
