@@ -1,0 +1,11 @@
+/* Companies screen visual refinement only. */
+.companies{gap:12px}
+.company{border-radius:13px;padding:16px;box-shadow:0 3px 12px rgba(18,31,53,.035);min-height:132px}
+.company-head{margin-bottom:10px}
+.company-head b{font-size:12px}
+.company-head small{font-size:9px}
+.company-meta{gap:7px}
+.company-meta span{padding:5px 7px;border-radius:7px;background:#f7f8fb}
+.company:hover{transform:translateY(-2px);box-shadow:0 9px 24px rgba(18,31,53,.07);border-color:#d8e0ee}
+@media(max-width:900px){.companies{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.companies{grid-template-columns:1fr}.company{min-height:0;padding:14px}}
