@@ -11,6 +11,5 @@ import './companies-ux.css';
 import './navigation-ux.css';
 import './crm-enhancements.css';
 import './filters-ux.css';
-import CRMEnhancements from './CRMEnhancements';
 export const metadata={title:'EMDAD CRM',description:'EMDAD sales CRM workspace'};
-export default function RootLayout({children}){return <html lang="en"><body>{children}<CRMEnhancements/></body></html>}
+export default function RootLayout({children}){return <html lang="en"><body>{children}</body></html>}
