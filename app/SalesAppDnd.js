@@ -2,6 +2,7 @@
 
 import {useEffect} from 'react';
 import SalesApp from './SalesApp';
+import IconPolish from './IconPolish';
 import {supabase} from '../lib/supabase-browser';
 
 const STAGE_TO_PROJECT={New:'new',Qualified:'pricing_technical',Proposition:'quotation_ready',Won:'won','Lost / Cancelled':'lost'};
@@ -44,5 +45,5 @@ export default function SalesAppDnd(){
     document.addEventListener('dragstart',start);document.addEventListener('dragend',end);document.addEventListener('dragover',over);document.addEventListener('drop',drop);
     return()=>{observer.disconnect();document.removeEventListener('dragstart',start);document.removeEventListener('dragend',end);document.removeEventListener('dragover',over);document.removeEventListener('drop',drop)};
   },[]);
-  return <><style jsx global>{`.deal-card{cursor:grab;transition:transform .15s,box-shadow .15s,opacity .15s}.deal-card:active{cursor:grabbing}.deal-card.is-dragging{opacity:.45;transform:rotate(1deg) scale(.99);box-shadow:0 12px 24px rgba(20,35,61,.14)}.deal-card.optimistic-move{opacity:.9}.pipe-col.drop-target{background:#e8f1ff;box-shadow:inset 0 0 0 2px #2b70e6}.pipe-col.drop-target .add-deal{color:#1769e0;font-weight:700}`}</style><SalesApp/></>;
+  return <><IconPolish/><style jsx global>{`.deal-card{cursor:grab;transition:transform .15s,box-shadow .15s,opacity .15s}.deal-card:active{cursor:grabbing}.deal-card.is-dragging{opacity:.45;transform:rotate(1deg) scale(.99);box-shadow:0 12px 24px rgba(20,35,61,.14)}.deal-card.optimistic-move{opacity:.9}.pipe-col.drop-target{background:#e8f1ff;box-shadow:inset 0 0 0 2px #2b70e6}.pipe-col.drop-target .add-deal{color:#1769e0;font-weight:700}.lucide-slot{display:inline-flex;align-items:center;justify-content:center;width:20px;height:18px;vertical-align:middle;margin-right:8px;flex:0 0 20px}.icon-ready{display:flex!important;align-items:center!important}.sidebar nav button .lucide-slot{color:currentColor}.top-icons button .lucide-slot{margin:0;width:auto}.quick .lucide-slot{margin-right:8px}`}</style><SalesApp/></>;
 }
