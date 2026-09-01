@@ -24,6 +24,24 @@
 .company b{font-size:12px}
 .company span,.company small{font-size:9px}
 .cash-card{min-height:82px}
+
+/* UX refinement: stronger hierarchy, clearer focus states, and better scrolling. */
+.overview{grid-column:span 2}
+.overview .panel-head{padding-left:2px;padding-right:2px}
+.stats .stat{position:relative;overflow:hidden}
+.stats .stat::after{content:'';position:absolute;right:-18px;bottom:-28px;width:72px;height:72px;border-radius:50%;background:var(--blue-soft);opacity:.55;pointer-events:none}
+.list-row,.op-row,.timeline-row{transition:background .14s ease,transform .14s ease}
+.list-row:hover,.op-row:hover,.timeline-row:hover{background:#fbfcff;transform:translateX(1px)}
+.chart{position:relative;overflow:hidden}
+.chart::after{content:'';position:absolute;left:8%;right:7%;bottom:27px;height:42%;background:linear-gradient(to top,rgba(49,94,251,.055),transparent);clip-path:polygon(0 100%,0 72%,12% 76%,24% 55%,36% 63%,48% 40%,60% 50%,72% 30%,84% 38%,100% 10%,100% 100%);pointer-events:none}
+.table-wrap{overflow:auto;overscroll-behavior-x:contain}
+.table-panel th{position:sticky;top:0;z-index:2}
+.pipeline{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
+.stage{scroll-snap-align:start}
+button,input,select,textarea{font:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #8ca5ff;outline-offset:2px}
+.empty{border:1px dashed #d9dfeb;border-radius:12px;background:#fafbfe;color:var(--muted);padding:24px;text-align:center}
 @media(max-width:1250px){.pipeline{grid-template-columns:repeat(4,minmax(220px,1fr))}.companies{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:900px){.companies{grid-template-columns:1fr}.stage{min-height:480px}}
-@media(max-width:620px){.pipeline{grid-template-columns:repeat(4,minmax(230px,1fr))}.table-panel table{min-width:760px}}
+@media(max-width:900px){.overview{grid-column:span 1}.companies{grid-template-columns:1fr}.stage{min-height:480px}}
+@media(max-width:620px){.pipeline{grid-template-columns:repeat(4,minmax(230px,1fr))}.table-panel table{min-width:760px}.stats .stat{min-height:78px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
