@@ -43,9 +43,15 @@ export async function POST(request) {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // Fetch the latest 50 messages directly by sequence range. This avoids
-      // search/UID ambiguity and is the documented ImapFlow pattern for recent mail.
-      const messages = await client.fetchAll('*:-50', { envelope: true, source: true, uid: true });
+      // Use an explicit numeric sequence range for maximum compatibility with IMAP servers.
+      // This avoids sequence-set parsing issues with wildcard ranges such as *:-50.
+      const total = Number(client.mailbox?.exists || 0);
+      if (total === 0) {
+        return Response.json({ ok: true, host, mailbox: 'INBOX', scanned: 0, inserted: 0, skipped: 0, errors: [] });
+      }
+      const start = Math.max(1, total - 49);
+      const range = `${start}:${total}`;
+      const messages = await client.fetchAll(range, { envelope: true, source: true, uid: true });
       scanned = messages.length;
       const sb = supabaseServer();
 
