@@ -3,6 +3,7 @@
 import {useEffect,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {Mail} from 'lucide-react';
+import './inbox-nav.css';
 
 export default function InboxNav(){
   const [host,setHost]=useState(null);
