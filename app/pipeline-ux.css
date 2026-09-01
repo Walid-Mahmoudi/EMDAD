@@ -1,0 +1,17 @@
+/* Pipeline board visual refinement only. */
+.pipeline{gap:16px;padding:2px 2px 12px}
+.stage{background:#f5f7fa;border-color:#e4e8ef;border-radius:13px;min-height:590px;padding:10px}
+.stage-head{position:sticky;top:0;z-index:3;background:#f5f7fa;border-bottom:1px solid #e8ebf0;margin-bottom:9px;padding:8px 6px 12px}
+.stage-head b{font-size:12px}
+.stage-head span{font-size:9px}
+.stage-head button{box-shadow:0 1px 2px rgba(18,31,53,.04)}
+.deal{position:relative;padding:15px;margin-bottom:10px;border-radius:12px;box-shadow:0 3px 10px rgba(18,31,53,.045);transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.deal:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(18,31,53,.08);border-color:#d6deee}
+.deal-top>span:last-child{font-weight:800;color:#66728a}
+.deal>b{font-size:12px;margin:10px 0 5px}
+.deal>strong{font-size:12px}
+.deal-bottom{padding-top:9px;border-top:1px solid #f0f2f6}
+.add-stage{border-radius:9px;margin-top:2px}
+.add-stage:hover{background:#eceff4;color:var(--ink)}
+.pipeline::-webkit-scrollbar{height:8px}.pipeline::-webkit-scrollbar-thumb{background:#d7dce6;border-radius:99px}.pipeline::-webkit-scrollbar-track{background:transparent}
+@media(max-width:900px){.pipeline{gap:12px}.stage{min-height:500px}}
