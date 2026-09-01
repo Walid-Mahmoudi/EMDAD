@@ -1,0 +1,9 @@
+/* Collections screen visual refinement only. */
+.cash{gap:12px}
+.cash-card{border-radius:13px;box-shadow:0 4px 14px rgba(18,31,53,.05)}
+.cash-card b{font-size:17px}
+.cash-card small{font-size:9px}
+.table-panel td{vertical-align:middle}
+.table-panel td strong{font-size:11px}
+.table-panel td .pill,.table-panel td .status{border-radius:999px}
+@media(max-width:700px){.cash{grid-template-columns:1fr}.cash-card{min-height:82px}}
