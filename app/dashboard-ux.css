@@ -1,0 +1,21 @@
+/* Dashboard visual refinement only. */
+.dashboard-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.dashboard-grid>.overview{grid-column:span 2}
+.dashboard-grid>.panel:not(.overview){min-height:100%}
+.overview .metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:15px 16px 13px}
+.overview .metrics>div{padding:10px 11px;border:1px solid #edf0f5;border-radius:9px;background:#fbfcfe}
+.overview .metrics b{font-size:18px}
+.stat:nth-child(1){border-top:2px solid var(--blue)}
+.stat:nth-child(2){border-top:2px solid var(--green)}
+.stat:nth-child(3){border-top:2px solid #7189df}
+.stat:nth-child(4){border-top:2px solid var(--orange)}
+.stat-top svg{width:18px;height:18px;padding:3px;box-sizing:content-box;border-radius:7px;background:#f5f7fb}
+.chart{height:142px;margin-top:2px}
+.chart-grid{opacity:.8}
+.hero{min-height:132px}
+.hero-actions .primary,.hero-actions .secondary{white-space:nowrap}
+.cash-card{min-height:88px}
+.cash-card svg{padding:8px;border-radius:9px;background:rgba(255,255,255,.07);box-sizing:content-box}
+@media(max-width:1100px){.dashboard-grid{grid-template-columns:1fr 1fr}.dashboard-grid>.overview{grid-column:span 2}.overview .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.dashboard-grid{grid-template-columns:1fr}.dashboard-grid>.overview{grid-column:span 1}.overview .metrics{grid-template-columns:1fr 1fr}.hero{align-items:flex-start;gap:16px;flex-direction:column}.hero-actions{width:100%}.hero-actions button{flex:1}.cash{grid-template-columns:1fr}}
+@media(max-width:460px){.overview .metrics{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stat b{font-size:17px}.hero h2{font-size:20px}}
