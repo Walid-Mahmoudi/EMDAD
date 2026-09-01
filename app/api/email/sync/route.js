@@ -43,15 +43,15 @@ export async function POST(request) {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // Explicit ALL + UID mode. Without { uid: true }, search() returns sequence
-      // numbers, which must not be passed to fetchOne(..., { uid: true }).
-      const uids = await client.search({ all: true }, { uid: true });
-      const recent = uids.slice(-50);
-      scanned = recent.length;
+      // Fetch the latest 50 messages directly by sequence range. This avoids
+      // search/UID ambiguity and is the documented ImapFlow pattern for recent mail.
+      const messages = await client.fetchAll('*:-50', { envelope: true, source: true, uid: true });
+      scanned = messages.length;
       const sb = supabaseServer();
-      for (const uid of recent) {
+
+      for (const message of messages) {
+        const uid = message.uid;
         try {
-          const message = await client.fetchOne(uid, { envelope: true, source: true, uid: true }, { uid: true });
           const parsed = await simpleParser(message.source);
           const externalId = parsed.messageId || `${host}:INBOX:${uid}`;
           const sender = parsed.from?.value?.[0];
@@ -80,7 +80,9 @@ export async function POST(request) {
           });
           if (insertError) throw insertError;
           inserted += 1;
-        } catch (error) { errors.push(`UID ${uid}: ${error.message || String(error)}`); }
+        } catch (error) {
+          errors.push(`UID ${uid}: ${error.message || String(error)}`);
+        }
       }
     } finally { lock.release(); }
     await client.logout();
