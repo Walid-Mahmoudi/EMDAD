@@ -1,0 +1,4 @@
+.chart-grid{background:repeating-linear-gradient(to bottom,transparent 0,transparent 28px,#eded e7 29px)}
+.chart-grid{background:repeating-linear-gradient(to bottom,transparent 0,transparent 28px,#ededed 29px)!important}
+.pill.cold{background:#ededed!important;color:#555!important}
+td{border-bottom-color:#ededed!important}
