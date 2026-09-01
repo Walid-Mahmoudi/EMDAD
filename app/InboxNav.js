@@ -10,7 +10,7 @@ export default function InboxNav(){
     let mount=null;
     let observer=null;
     const attach=()=>{
-      const nav=document.querySelector('aside.sidebar nav');
+      const nav=document.querySelector('aside.side nav');
       if(!nav || mount) return !!nav;
       mount=document.createElement('div');
       mount.className='inbox-nav-mount';
