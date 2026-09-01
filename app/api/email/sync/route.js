@@ -43,9 +43,9 @@ export async function POST(request) {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // Sync the most recent messages regardless of read/unread state. Duplicate protection
-      // in sales_inbox makes repeated syncs safe and avoids missing messages already opened in Outlook.
-      const uids = await client.search({});
+      // Explicit ALL + UID mode. Without { uid: true }, search() returns sequence
+      // numbers, which must not be passed to fetchOne(..., { uid: true }).
+      const uids = await client.search({ all: true }, { uid: true });
       const recent = uids.slice(-50);
       scanned = recent.length;
       const sb = supabaseServer();
