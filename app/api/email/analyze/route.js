@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MODEL = process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 
 function env(name) { return process.env[name] || ''; }
 
@@ -16,33 +16,44 @@ function db() {
 
 function cleanJson(text) {
   const value = String(text || '').trim();
-  if (!value) throw new Error('OpenAI returned an empty response.');
+  if (!value) throw new Error('Gemini returned an empty response.');
   try { return JSON.parse(value); } catch {}
-  const match = value.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('OpenAI did not return valid JSON.');
+  const fenced = value.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  try { return JSON.parse(fenced); } catch {}
+  const match = fenced.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Gemini did not return valid JSON.');
   return JSON.parse(match[0]);
 }
 
-async function analyzeWithOpenAI(item) {
-  const apiKey = env('OPENAI_API_KEY');
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured in Vercel.');
+async function analyzeWithGemini(item) {
+  const apiKey = env('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured in Vercel.');
 
   const prompt = `You are a senior HVAC sales operations analyst. Analyze the incoming project request below and return ONLY valid JSON. Do not invent facts. Use null when a field is not present or cannot be inferred reliably. If you infer a probability, clearly base it on the message context and keep it conservative.\n\nReturn exactly these keys:\ncompany_name, contact_name, project_name, project_type, location, consultant_name, hvac_system, estimated_value, expected_start, win_probability, temperature, summary, next_action\n\ntemperature must be one of: Hot, Warm, Cold, Unknown.\nwin_probability must be an integer 0-100 or null. estimated_value must be a number or null.\n\nSubject: ${item.subject || ''}\nSender: ${item.sender_name || ''} <${item.sender_address || ''}>\nReceived: ${item.received_at || ''}\nAttachments: ${JSON.stringify(item.ai_extracted_data?.attachment_names || [])}\n\nMessage:\n${item.body || ''}`;
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify({
-      model: MODEL,
-      input: prompt,
-      max_output_tokens: 1200,
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 1200,
+        responseMimeType: 'application/json',
+      },
     }),
   });
 
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || `OpenAI request failed (${response.status}).`);
+  if (!response.ok) {
+    const message = data?.error?.message || `Gemini request failed (${response.status}).`;
+    throw new Error(message);
+  }
 
-  const outputText = data.output_text || data.output?.flatMap(x => x.content || []).map(x => x.text || '').join('') || '';
+  const outputText = data?.candidates?.[0]?.content?.parts?.map(part => part?.text || '').join('') || '';
   return cleanJson(outputText);
 }
 
@@ -69,7 +80,7 @@ export async function POST(request) {
     const results = [];
     for (const item of items) {
       try {
-        const extracted = await analyzeWithOpenAI(item);
+        const extracted = await analyzeWithGemini(item);
         const summary = extracted.summary || 'AI analysis completed.';
         const nextAction = extracted.next_action || 'Review request and decide next action.';
         const merged = {
@@ -77,6 +88,7 @@ export async function POST(request) {
           ...extracted,
           analyzed_at: new Date().toISOString(),
           model: MODEL,
+          provider: 'gemini',
         };
 
         const { error: updateError } = await supabase
@@ -95,7 +107,7 @@ export async function POST(request) {
     }
 
     const analyzed = results.filter(x => x.ok).length;
-    return Response.json({ ok: true, analyzed, failed: results.length - analyzed, results, model: MODEL });
+    return Response.json({ ok: true, analyzed, failed: results.length - analyzed, results, model: MODEL, provider: 'gemini' });
   } catch (error) {
     return Response.json({ ok: false, error: error.message || String(error) }, { status: 500 });
   }
