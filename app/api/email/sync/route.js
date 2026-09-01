@@ -5,27 +5,28 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function env(name) {
-  return process.env[name] || '';
-}
+function env(name) { return process.env[name] || ''; }
 
-function supabaseAdmin() {
+function supabaseServer() {
   const url = env('NEXT_PUBLIC_SUPABASE_URL');
   const key = env('SUPABASE_SERVICE_ROLE_KEY') || env('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') || env('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   if (!url || !key) throw new Error('Supabase environment variables are missing.');
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-function normalizeText(value) {
-  return String(value || '').replace(/\r\n/g, '\n').trim();
+function normalizeText(value) { return String(value || '').replace(/\r\n/g, '\n').trim(); }
+
+function authorized(request) {
+  const configuredToken = env('EMAIL_SYNC_TOKEN');
+  if (configuredToken) return request.headers.get('authorization') === `Bearer ${configuredToken}`;
+  const origin = request.headers.get('origin');
+  const host = request.headers.get('host');
+  if (!origin || !host) return false;
+  try { return new URL(origin).host === host; } catch { return false; }
 }
 
 export async function POST(request) {
-  const configuredToken = env('EMAIL_SYNC_TOKEN');
-  if (configuredToken) {
-    const auth = request.headers.get('authorization') || '';
-    if (auth !== `Bearer ${configuredToken}`) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!authorized(request)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   const host = env('EMAIL_IMAP_HOST') || 'mail.emdad.net';
   const port = Number(env('EMAIL_IMAP_PORT') || 993);
@@ -34,17 +35,8 @@ export async function POST(request) {
   const secure = String(env('EMAIL_IMAP_SECURE') || 'true').toLowerCase() !== 'false';
   if (!password) return Response.json({ ok: false, error: 'EMAIL_IMAP_PASSWORD is not configured in Vercel.' }, { status: 400 });
 
-  const client = new ImapFlow({
-    host,
-    port,
-    secure,
-    auth: { user, pass: password },
-    logger: false,
-    tls: { rejectUnauthorized: true },
-  });
-
-  let inserted = 0;
-  let skipped = 0;
+  const client = new ImapFlow({ host, port, secure, auth: { user, pass: password }, logger: false, tls: { rejectUnauthorized: true } });
+  let inserted = 0, skipped = 0, scanned = 0;
   const errors = [];
 
   try {
@@ -53,6 +45,8 @@ export async function POST(request) {
     try {
       const uids = await client.search({ seen: false });
       const recent = uids.slice(-50);
+      scanned = recent.length;
+      const sb = supabaseServer();
       for (const uid of recent) {
         try {
           const message = await client.fetchOne(uid, { envelope: true, source: true, uid: true }, { uid: true });
@@ -66,18 +60,9 @@ export async function POST(request) {
           const receivedAt = parsed.date || message.envelope?.date || new Date();
           const attachmentNames = (parsed.attachments || []).map(a => a.filename).filter(Boolean);
 
-          const sb = supabaseAdmin();
-          const { data: existing, error: existingError } = await sb
-            .from('sales_inbox')
-            .select('id')
-            .eq('source', 'email')
-            .eq('external_message_id', externalId)
-            .maybeSingle();
+          const { data: existing, error: existingError } = await sb.from('sales_inbox').select('id').eq('source', 'email').eq('external_message_id', externalId).maybeSingle();
           if (existingError) throw existingError;
-          if (existing) {
-            skipped += 1;
-            continue;
-          }
+          if (existing) { skipped += 1; continue; }
 
           const { error: insertError } = await sb.from('sales_inbox').insert({
             source: 'email',
@@ -88,26 +73,18 @@ export async function POST(request) {
             body,
             received_at: new Date(receivedAt).toISOString(),
             status: 'new',
-            ai_extracted_data: {
-              source: 'outlook_imap',
-              attachment_names: attachmentNames,
-              has_attachments: attachmentNames.length > 0,
-            },
+            ai_extracted_data: { source: 'outlook_imap', attachment_names: attachmentNames, has_attachments: attachmentNames.length > 0 },
             suggested_action: 'Review incoming project request',
           });
           if (insertError) throw insertError;
           inserted += 1;
-        } catch (error) {
-          errors.push(`UID ${uid}: ${error.message || String(error)}`);
-        }
+        } catch (error) { errors.push(`UID ${uid}: ${error.message || String(error)}`); }
       }
-    } finally {
-      lock.release();
-    }
+    } finally { lock.release(); }
     await client.logout();
-    return Response.json({ ok: true, host, mailbox: 'INBOX', scanned: Math.min(recent?.length || 0, 50), inserted, skipped, errors });
+    return Response.json({ ok: true, host, mailbox: 'INBOX', scanned, inserted, skipped, errors });
   } catch (error) {
     try { await client.logout(); } catch {}
-    return Response.json({ ok: false, stage: 'imap', host, port, user, error: error.message || String(error), inserted, skipped, errors }, { status: 502 });
+    return Response.json({ ok: false, stage: 'imap', host, port, user, scanned, inserted, skipped, errors, error: error.message || String(error) }, { status: 502 });
   }
 }
