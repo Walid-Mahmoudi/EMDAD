@@ -1,0 +1,10 @@
+/* Activities screen visual refinement only. */
+.timeline{gap:0}
+.timeline-row{padding:14px 16px;border:1px solid #edf0f5;border-radius:11px;background:#fff;margin-bottom:9px;box-shadow:0 2px 8px rgba(18,31,53,.025)}
+.timeline-row:last-child{margin-bottom:0}
+.timeline-row b{font-size:11px}
+.timeline-row small{font-size:9px}
+.timeline-dot{box-shadow:0 0 0 4px #f4f6fb}
+.op-row{min-height:58px;border-radius:10px;padding:10px 12px}
+.op-row+ .op-row{margin-top:5px}
+@media(max-width:620px){.timeline-row{padding:12px}.op-row{padding:9px 10px}}
