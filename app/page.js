@@ -1,2 +1,6 @@
 import SalesAppClean from './SalesAppClean';
-export default function Page(){return <SalesAppClean/>}
+import InboxNav from './InboxNav';
+
+export default function Page(){
+  return <><SalesAppClean/><InboxNav/></>;
+}
