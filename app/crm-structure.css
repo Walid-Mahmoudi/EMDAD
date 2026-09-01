@@ -1,0 +1,20 @@
+/* EMDAD CRM — information architecture */
+.top-tabs{display:none!important}
+.top{justify-content:space-between!important;gap:18px!important}
+.global{flex:1!important;max-width:620px!important;margin:0 auto!important}
+.side-title{margin-top:22px!important;margin-bottom:8px!important}
+.actions-title{margin-top:24px!important}
+.side nav{display:flex!important;flex-direction:column!important}
+.side nav button{min-height:44px!important}
+.side nav button.selected{font-weight:650!important}
+.quick{min-height:42px!important}
+.page-head{margin-bottom:22px!important}
+.page-head h1{font-weight:700!important;letter-spacing:-.035em!important}
+.head-actions{gap:10px!important}
+.panel,.stat,.cash-card,.stage,.table-panel,.company{box-shadow:0 6px 24px rgba(62,45,110,.06)!important}
+.stat{min-height:118px!important}
+.panel-head{padding:0 18px!important}
+/* clearer visual hierarchy for sales workflow */
+.crm .side nav button:nth-child(1),
+.crm .side nav button:nth-child(2){margin-bottom:2px!important}
+@media(max-width:900px){.global{max-width:none!important;margin:0!important}.top{gap:10px!important}}
