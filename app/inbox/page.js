@@ -1,6 +1,7 @@
 'use client';
 import SalesInbox from '../SalesInbox';
+import EmailSyncPanel from './EmailSyncPanel';
 
 export default function InboxPage(){
-  return <SalesInbox/>;
+  return <><EmailSyncPanel/><SalesInbox/></>;
 }
