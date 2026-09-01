@@ -1,0 +1,17 @@
+/* Module-level UI refinement. Presentation only; no data/workflow changes. */
+.table-panel td:first-child{min-width:220px}
+.table-panel td b{letter-spacing:-.01em}
+.table-panel .status{white-space:nowrap}
+.table-panel tbody tr:last-child td{border-bottom:0}
+.company{align-items:center}
+.company>div:nth-child(2){min-width:0}
+.company b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.company span,.company small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.form .field:last-child:nth-child(odd){grid-column:1/-1}
+.modal-foot .secondary,.modal-foot .primary{min-width:92px}
+.alert{box-shadow:0 3px 12px rgba(18,31,53,.03)}
+.pipeline .stage-head{position:sticky;top:0;z-index:1;background:#f7f8fb}
+.pipeline .add-stage{border-radius:8px}
+.pipeline .add-stage:hover{background:#fff;color:var(--blue)}
+@media(max-width:900px){.page-head{align-items:flex-start;gap:12px}.head-actions{flex-wrap:wrap}.hero{align-items:flex-start;gap:18px}.hero-actions{flex-wrap:wrap}.stats{grid-template-columns:repeat(2,1fr)}.dashboard-grid{grid-template-columns:1fr 1fr}.cash{grid-template-columns:1fr}.form{grid-template-columns:1fr}}
+@media(max-width:620px){.page-head{display:block}.head-actions{margin-top:12px}.head-actions .primary,.head-actions .secondary{flex:1}.hero{display:block}.hero-actions{margin-top:16px}.hero-actions .primary,.hero-actions .secondary{flex:1}.stats{grid-template-columns:1fr 1fr}.dashboard-grid{grid-template-columns:1fr}.pipeline{margin-left:-1px;margin-right:-1px;padding-left:1px;padding-right:1px}}
