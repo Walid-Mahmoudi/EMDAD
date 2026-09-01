@@ -13,7 +13,7 @@ export default function EmailSyncPanel(){
       const data=await res.json();
       if(!res.ok || !data.ok) throw new Error(data.error || data.message || 'Email sync failed');
       setResult(data);
-      window.dispatchEvent(new CustomEvent('sales-inbox-refresh'));
+      setTimeout(()=>window.location.reload(),700);
     }catch(e){setError(e.message || 'Email sync failed');}
     finally{setBusy(false);}
   }
