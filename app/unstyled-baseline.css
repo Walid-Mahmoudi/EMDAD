@@ -1,0 +1,4 @@
+/* Deliberately removes the previous visual system while preserving the CRM application and data. */
+html,body{all:revert;min-height:100%;}
+body *{all:revert;}
+svg{display:inline-block;}
