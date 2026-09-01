@@ -2,15 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
 function env(name){ return process.env[name] || ''; }
 function authorized(request){
   const configuredToken=env('EMAIL_SYNC_TOKEN');
   if(configuredToken) return request.headers.get('authorization')===`Bearer ${configuredToken}`;
-  const origin=request.headers.get('origin');
   const host=request.headers.get('host');
-  if(!origin || !host) return false;
-  try{return new URL(origin).host===host;}catch{return false;}
+  const origin=request.headers.get('origin');
+  const referer=request.headers.get('referer');
+  const fetchSite=request.headers.get('sec-fetch-site');
+  if(origin&&host){try{if(new URL(origin).host===host)return true;}catch{}}
+  if(referer&&host){try{if(new URL(referer).host===host)return true;}catch{}}
+  return fetchSite==='same-origin';
 }
 function supabaseServer(){
   const url=env('NEXT_PUBLIC_SUPABASE_URL');
