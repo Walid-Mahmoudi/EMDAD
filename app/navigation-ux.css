@@ -1,0 +1,23 @@
+/* Global navigation, controls and modal visual refinement only. */
+.side{border-right:1px solid #e5e9f1;background:#fff}
+.brand{border-bottom:1px solid #eef1f5}
+.side nav button,.quick button{transition:background .14s ease,color .14s ease,transform .14s ease}
+.side nav button:hover,.quick button:hover{transform:translateX(1px);background:#f5f7fb}
+.side nav button.selected{background:#edf2ff;color:var(--blue);font-weight:750}
+.quick{border-top:1px solid #eef1f5;margin-top:14px;padding-top:14px}
+.top{border-bottom:1px solid #e7ebf2;background:rgba(255,255,255,.94);backdrop-filter:blur(10px)}
+.top-tabs button{position:relative}
+.top-tabs button:first-child{color:var(--ink);font-weight:750}
+.global{transition:border-color .14s ease,box-shadow .14s ease}
+.global:focus-within{border-color:#cdd8f6;box-shadow:0 0 0 3px rgba(49,94,251,.07)}
+.icon-btn{transition:background .14s ease,border-color .14s ease,transform .14s ease}
+.icon-btn:hover{background:#f3f6fb;border-color:#dbe1eb;transform:translateY(-1px)}
+.primary,.secondary{transition:transform .14s ease,box-shadow .14s ease}
+.primary:hover,.secondary:hover{transform:translateY(-1px)}
+.modal-bg{padding:20px}
+.modal{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;box-shadow:0 24px 70px rgba(18,31,53,.18);border-radius:16px}
+.modal-head{position:sticky;top:0;background:#fff;z-index:2;border-bottom:1px solid #eef1f5}
+.form input,.form select,.form textarea{border-radius:9px;border-color:#e0e5ee;background:#fbfcfe;transition:border-color .14s ease,box-shadow .14s ease,background .14s ease}
+.form input:focus,.form select:focus,.form textarea:focus{background:#fff;border-color:#aebef0;box-shadow:0 0 0 3px rgba(49,94,251,.07)}
+@media(max-width:900px){.side{border-right:0;border-bottom:1px solid #e7ebf2}.top{position:sticky;top:0;z-index:10}}
+@media(max-width:620px){.top-tabs{display:none}.modal-bg{padding:10px}.modal{max-height:calc(100vh - 20px);border-radius:13px}.modal-head{padding:13px 14px}}
