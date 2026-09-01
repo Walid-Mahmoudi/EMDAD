@@ -9,13 +9,29 @@ export default function InboxNav(){
   const [host,setHost]=useState(null);
 
   useEffect(()=>{
-    const nav=document.querySelector('.side nav');
-    if(!nav) return;
-    const mount=document.createElement('div');
-    mount.className='inbox-nav-mount';
-    nav.appendChild(mount);
-    setHost(mount);
-    return ()=>mount.remove();
+    let mount=null;
+    let observer=null;
+
+    const attach=()=>{
+      const nav=document.querySelector('.side nav');
+      if(!nav || mount) return !!nav;
+      mount=document.createElement('div');
+      mount.className='inbox-nav-mount';
+      nav.appendChild(mount);
+      setHost(mount);
+      observer?.disconnect();
+      return true;
+    };
+
+    if(!attach()){
+      observer=new MutationObserver(()=>attach());
+      observer.observe(document.body,{childList:true,subtree:true});
+    }
+
+    return ()=>{
+      observer?.disconnect();
+      mount?.remove();
+    };
   },[]);
 
   if(!host) return null;
