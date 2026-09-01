@@ -45,15 +45,20 @@ export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
     const requestedId = body?.id || null;
-    const limit = Math.min(Math.max(Number(body?.limit || 25), 1), 25);
+    // Gemini free tier currently limits this model to a small number of requests per minute.
+    // Keep one click within that limit instead of attempting 25 requests at once.
+    const limit = Math.min(Math.max(Number(body?.limit || 15), 1), 15);
     const supabase = db();
 
-    let query = supabase.from('sales_inbox').select('id,source,sender_name,sender_address,subject,body,received_at,status,ai_extracted_data').in('status', ['new', 'reviewing']).order('received_at', { ascending: false }).limit(requestedId ? 1 : limit);
+    // Only analyze genuinely new messages. Successfully analyzed messages are moved to
+    // "reviewing", so clicking Analyze again processes the remaining queue instead of
+    // spending quota on the same messages repeatedly.
+    let query = supabase.from('sales_inbox').select('id,source,sender_name,sender_address,subject,body,received_at,status,ai_extracted_data').eq('status', 'new').order('received_at', { ascending: false }).limit(requestedId ? 1 : limit);
     if (requestedId) query = query.eq('id', requestedId);
 
     const { data: items, error: fetchError } = await query;
     if (fetchError) throw fetchError;
-    if (!items?.length) return Response.json({ ok: true, analyzed: 0, failed: 0, results: [], message: 'No new or reviewing messages to analyze.' });
+    if (!items?.length) return Response.json({ ok: true, analyzed: 0, failed: 0, results: [], message: 'No new messages to analyze.' });
 
     const results = [];
     for (const item of items) {
@@ -62,7 +67,13 @@ export async function POST(request) {
         const summary = extracted.summary || 'AI analysis completed.';
         const nextAction = extracted.next_action || 'Review request and decide next action.';
         const merged = { ...(item.ai_extracted_data || {}), ...extracted, analyzed_at: new Date().toISOString(), model: MODEL };
-        const { error: updateError } = await supabase.from('sales_inbox').update({ ai_extracted_data: merged, ai_summary: summary, suggested_action: nextAction }).eq('id', item.id);
+        const { error: updateError } = await supabase.from('sales_inbox').update({
+          ai_extracted_data: merged,
+          ai_summary: summary,
+          suggested_action: nextAction,
+          status: 'reviewing',
+          reviewed_at: null,
+        }).eq('id', item.id);
         if (updateError) throw updateError;
         results.push({ id: item.id, ok: true, temperature: extracted.temperature || 'Unknown', win_probability: extracted.win_probability ?? null });
       } catch (error) {
@@ -71,7 +82,7 @@ export async function POST(request) {
     }
 
     const analyzed = results.filter(x => x.ok).length;
-    return Response.json({ ok: true, analyzed, failed: results.length - analyzed, results, model: MODEL });
+    return Response.json({ ok: true, analyzed, failed: results.length - analyzed, results, model: MODEL, limit });
   } catch (error) {
     return Response.json({ ok: false, error: error.message || String(error) }, { status: 500 });
   }
