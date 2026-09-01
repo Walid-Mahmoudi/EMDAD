@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
 function env(name) { return process.env[name] || ''; }
 
@@ -18,9 +18,7 @@ function cleanJson(text) {
   const value = String(text || '').trim();
   if (!value) throw new Error('Gemini returned an empty response.');
   try { return JSON.parse(value); } catch {}
-  const fenced = value.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  try { return JSON.parse(fenced); } catch {}
-  const match = fenced.match(/\{[\s\S]*\}/);
+  const match = value.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('Gemini did not return valid JSON.');
   return JSON.parse(match[0]);
 }
@@ -31,29 +29,15 @@ async function analyzeWithGemini(item) {
 
   const prompt = `You are a senior HVAC sales operations analyst. Analyze the incoming project request below and return ONLY valid JSON. Do not invent facts. Use null when a field is not present or cannot be inferred reliably. If you infer a probability, clearly base it on the message context and keep it conservative.\n\nReturn exactly these keys:\ncompany_name, contact_name, project_name, project_type, location, consultant_name, hvac_system, estimated_value, expected_start, win_probability, temperature, summary, next_action\n\ntemperature must be one of: Hot, Warm, Cold, Unknown.\nwin_probability must be an integer 0-100 or null. estimated_value must be a number or null.\n\nSubject: ${item.subject || ''}\nSender: ${item.sender_name || ''} <${item.sender_address || ''}>\nReceived: ${item.received_at || ''}\nAttachments: ${JSON.stringify(item.ai_extracted_data?.attachment_names || [])}\n\nMessage:\n${item.body || ''}`;
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 1200,
-        responseMimeType: 'application/json',
-      },
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1200 } }),
   });
 
   const data = await response.json();
-  if (!response.ok) {
-    const message = data?.error?.message || `Gemini request failed (${response.status}).`;
-    throw new Error(message);
-  }
-
-  const outputText = data?.candidates?.[0]?.content?.parts?.map(part => part?.text || '').join('') || '';
+  if (!response.ok) throw new Error(data?.error?.message || `Gemini request failed (${response.status}).`);
+  const outputText = data?.candidates?.[0]?.content?.parts?.map(x => x.text || '').join('') || '';
   return cleanJson(outputText);
 }
 
@@ -64,13 +48,7 @@ export async function POST(request) {
     const limit = Math.min(Math.max(Number(body?.limit || 25), 1), 25);
     const supabase = db();
 
-    let query = supabase
-      .from('sales_inbox')
-      .select('id,source,sender_name,sender_address,subject,body,received_at,status,ai_extracted_data')
-      .in('status', ['new', 'reviewing'])
-      .order('received_at', { ascending: false })
-      .limit(requestedId ? 1 : limit);
-
+    let query = supabase.from('sales_inbox').select('id,source,sender_name,sender_address,subject,body,received_at,status,ai_extracted_data').in('status', ['new', 'reviewing']).order('received_at', { ascending: false }).limit(requestedId ? 1 : limit);
     if (requestedId) query = query.eq('id', requestedId);
 
     const { data: items, error: fetchError } = await query;
@@ -83,22 +61,8 @@ export async function POST(request) {
         const extracted = await analyzeWithGemini(item);
         const summary = extracted.summary || 'AI analysis completed.';
         const nextAction = extracted.next_action || 'Review request and decide next action.';
-        const merged = {
-          ...(item.ai_extracted_data || {}),
-          ...extracted,
-          analyzed_at: new Date().toISOString(),
-          model: MODEL,
-          provider: 'gemini',
-        };
-
-        const { error: updateError } = await supabase
-          .from('sales_inbox')
-          .update({
-            ai_extracted_data: merged,
-            ai_summary: summary,
-            suggested_action: nextAction,
-          })
-          .eq('id', item.id);
+        const merged = { ...(item.ai_extracted_data || {}), ...extracted, analyzed_at: new Date().toISOString(), model: MODEL };
+        const { error: updateError } = await supabase.from('sales_inbox').update({ ai_extracted_data: merged, ai_summary: summary, suggested_action: nextAction }).eq('id', item.id);
         if (updateError) throw updateError;
         results.push({ id: item.id, ok: true, temperature: extracted.temperature || 'Unknown', win_probability: extracted.win_probability ?? null });
       } catch (error) {
@@ -107,7 +71,7 @@ export async function POST(request) {
     }
 
     const analyzed = results.filter(x => x.ok).length;
-    return Response.json({ ok: true, analyzed, failed: results.length - analyzed, results, model: MODEL, provider: 'gemini' });
+    return Response.json({ ok: true, analyzed, failed: results.length - analyzed, results, model: MODEL });
   } catch (error) {
     return Response.json({ ok: false, error: error.message || String(error) }, { status: 500 });
   }
